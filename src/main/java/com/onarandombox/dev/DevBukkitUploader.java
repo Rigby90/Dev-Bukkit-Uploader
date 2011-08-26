@@ -4,6 +4,7 @@ import joptsimple.OptionSet;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import javax.tools.JavaCompiler;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -23,11 +24,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 public class DevBukkitUploader {
@@ -93,12 +90,12 @@ public class DevBukkitUploader {
 
         // Start of Parameters
         parameters.put("name", (String) options.valueOf("version"));
+        parameters.put("game_version", "1"); // TODO: This needs sorting once the Versions are out.
         parameters.put("file_type", (String) options.valueOf("type"));
         parameters.put("change_log", (String) options.valueOf("changelog"));
         parameters.put("change_markup_type", (String) options.valueOf("markup"));
         parameters.put("known_caveats", (String) options.valueOf("caveats"));
         parameters.put("caveats_markup_type", (String) options.valueOf("caveatsmarkup"));
-        parameters.put("game_version", "1"); // TODO: This needs sorting once the Versions are out.
         // End of Parameters
 
         System.out.println("---------------------------");
@@ -118,7 +115,7 @@ public class DevBukkitUploader {
     private static String CHARSET = "UTF-8";
 
     private static String API_KEY = "";
-    private static Map<String, String> parameters = new HashMap<String, String>();
+    private static Map<String, String> parameters = new LinkedHashMap<String, String>();
     private static URL UPLOAD_URL = null;
     private static File FILE_UPLOAD = null;
 
@@ -130,13 +127,19 @@ public class DevBukkitUploader {
 
         // Create a Connection to the URL.
         URLConnection connection = UPLOAD_URL.openConnection();
+
+        connection.setRequestProperty("User-Agent", "CurseForge Uploader Script/1.0");
+        connection.setRequestProperty("Accept-Encoding", "identity");
+
+        // Pass along the Users API-Key, without this they can't upload.
+        connection.setRequestProperty("X-API-Key", API_KEY);
+        connection.setRequestProperty("Content-type", "multipart/form-data; boundary=" + MIME_BOUNDARY);
+        connection.setRequestProperty("Accept","");
+        connection.setRequestProperty("Connection","");
+
         connection.setDoOutput(true);
         connection.setDoInput(true);
 
-        connection.setRequestProperty("User-Agent", "Dev Bukkit Uploader");
-        // Pass along the Users API-Key, without this they can't upload.
-        connection.setRequestProperty("X-API-Key", API_KEY);
-        connection.setRequestProperty("Content-Type", "multipart/form-data; MIME_BOUNDARY=" + MIME_BOUNDARY);
 
         PrintWriter writer = null;
         OutputStream output = null;
@@ -211,7 +214,7 @@ public class DevBukkitUploader {
         for (Map.Entry<String, String> entry : parameters.entrySet()) {
             writer.append("--" + MIME_BOUNDARY).append(CRLF);
             writer.append("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"").append(CRLF);
-            writer.append("Content-Type: text/plain; CHARSET=" + CHARSET).append(CRLF);
+            //writer.append("Content-Type: text/plain; CHARSET=" + CHARSET).append(CRLF);
             writer.append(CRLF);
             writer.append(entry.getValue()).append(CRLF).flush();
         }
@@ -263,6 +266,7 @@ public class DevBukkitUploader {
                 }
             }
         }
-        writer.append(CRLF).flush(); // CRLF is important! It indicates end of binary MIME_BOUNDARY.
+         writer.append(CRLF).append("--" + MIME_BOUNDARY + "--").append(CRLF).flush();
+        //writer.append(CRLF).flush(); // CRLF is important! It indicates end of binary MIME_BOUNDARY.
     }
 }
